@@ -99,15 +99,20 @@ namespace Breeze.ThirdPartyLicenseOverview
         private async Task<string> RecognizeLicense(HttpClient httpClient, string licenseUrl)
         {
             var response = await httpClient.GetAsync(licenseUrl);
-            if (response.IsSuccessStatusCode) {
+            if (response.IsSuccessStatusCode)
+            {
                 string text = await response.Content.ReadAsStringAsync();
                 if (text.Contains("MIT License"))
+                    return "MIT";
+                else if (text.Contains("MIT"))
                     return "MIT";
                 else if (text.Contains("The BSD License"))
                     return "BSD License";
                 else if (text.Contains("Apache License 2.0"))
                     return "Apache License 2.0";
                 else if (text.Contains("Apache License") && text.Contains("Version 2.0"))
+                    return "Apache License 2.0";
+                else if (text.Contains("Apache-2.0"))
                     return "Apache License 2.0";
                 else if (text.Contains("MICROSOFT SOFTWARE LICENSE"))
                     return "MICROSOFT SOFTWARE LICENSE";
@@ -119,7 +124,8 @@ namespace Breeze.ThirdPartyLicenseOverview
                     return "LGPL";
                 else
                     return "UNKNOWN";
-            } else
+            }
+            else
                 return response.ReasonPhrase;
         }
 
@@ -147,7 +153,23 @@ namespace Breeze.ThirdPartyLicenseOverview
 
         private void FindPackageReferences(List<Library> libraries, string projectFile)
         {
-            throw new NotImplementedException();
+            using (var reader = new StreamReader(projectFile))
+            {
+                var document = new XmlDocument();
+                document.Load(reader);
+                foreach (XmlElement node in document.SelectNodes("/Project/ItemGroup/PackageReference"))
+                {
+                    var name = node.GetAttribute("Include");
+                    if (!libraries.Any(p => p.Name == name))
+                    {
+                        libraries.Add(new Library
+                        {
+                            Name = name,
+                            Version = node.GetAttribute("Version")
+                        });
+                    }
+                }
+            }
         }
 
         private ProjectFormat AnalyzeProjectFile(List<string> projects, int index)
